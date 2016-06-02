@@ -664,7 +664,7 @@ ss.SimpleUpload = function( options ) {
         autoCalibrate: true,
         onBlankSubmit: function() {},
         onAbort: function( fileObj ) {},
-        onChange: function( filename, extension, uploadBtn, size, file ) {},
+        onChange: function( fileObj ) {},
         onSubmit: function( fileObj ) {},
         onProgress: function( fileObj, pct ) {},
         onUpdateFileSize: function( filesize ) {},
@@ -1138,19 +1138,19 @@ ss.IframeUpload = {
     _addFiles: function( file ) {
         var filename = ss.getFilename( file.value ),
             ext = ss.getExt( filename );
-
-        if ( false === this._opts.onChange.call( this, filename, ext, this._overBtn, undefined, file ) ) {
-            return false;
-        }
-
-        this._queue.push({
+        var fileObj = {
             id: ss.getUID(),
             file: file,
             name: filename,
             ext: ext,
             btn: this._overBtn,
             size: null
-        });
+        }
+        if ( false === this._opts.onChange.call( this, fileObj ) ) {
+            return false;
+        }
+
+        this._queue.push(fileObj);
 
         return true;
     },
@@ -1611,19 +1611,19 @@ ss.XhrUpload = {
             filename = ss.getFilename( files[i].name );
             ext = ss.getExt( filename );
             size = Math.round( files[i].size / 1024 );
-
-            if ( false === this._opts.onChange.call( this, filename, ext, this._overBtn, size, files[i] ) ) {
-                return false;
-            }
-
-            this._queue.push({
+            var fileObj = {
                 id: ss.getUID(),
                 file: files[i],
                 name: filename,
                 ext: ext,
                 btn: this._overBtn,
                 size: size
-            });
+            }
+            if ( false === this._opts.onChange.call( this, fileObj ) ) {
+                return false;
+            }
+
+            this._queue.push(fileObj);
         }
 
         return true;
