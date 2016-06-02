@@ -663,19 +663,19 @@ ss.SimpleUpload = function( options ) {
         encodeHeaders: true,
         autoCalibrate: true,
         onBlankSubmit: function() {},
-        onAbort: function( filename, uploadBtn, size ) {},
+        onAbort: function( fileObj ) {},
         onChange: function( filename, extension, uploadBtn, size, file ) {},
-        onSubmit: function( filename, extension, uploadBtn, size ) {},
-        onProgress: function( pct ) {},
+        onSubmit: function( fileObj ) {},
+        onProgress: function( fileObj, pct ) {},
         onUpdateFileSize: function( filesize ) {},
-        onComplete: function( filename, response, uploadBtn, size ) {},
-        onExtError: function( filename, extension ) {},
-        onSizeError: function( filename, fileSize ) {},
-        onError: function( filename, type, status, statusText, response, uploadBtn, size ) {},
-        startXHR: function( filename, fileSize, uploadBtn ) {},
-        endXHR: function( filename, fileSize, uploadBtn ) {},
-        startNonXHR: function( filename, uploadBtn ) {},
-        endNonXHR: function( filename, uploadBtn ) {}
+        onComplete: function( response, fileObj ) {},
+        onExtError: function( fileObj ) {},
+        onSizeError: function( fileObj ) {},
+        onError: function( type, status, statusText, response, fileObj ) {},
+        startXHR: function( fileObj ) {},
+        endXHR: function( fileObj ) {},
+        startNonXHR: function( fileObj ) {},
+        endNonXHR: function( fileObj ) {}
     };
 
     ss.extendObj( this._opts, ss._options ); // Include any setup options
@@ -1090,7 +1090,7 @@ ss.SimpleUpload.prototype = {
         }
 
         // User returned false to cancel upload
-        if ( false === this._opts.onSubmit.call( this, this._queue[0].name, this._queue[0].ext, this._queue[0].btn, this._queue[0].size ) ) {
+        if ( false === this._opts.onSubmit.call( this, this._queue[0] ) ) {
             return;
         }
 
@@ -1189,7 +1189,7 @@ ss.IframeUpload = {
             method: opts.method
         });
 
-        opts.onProgress.call( this, 0 );
+        opts.onProgress.call( this, fileObj, 0 );
 
         if ( pctBox ) {
             pctBox.innerHTML = '0%';
@@ -1213,7 +1213,7 @@ ss.IframeUpload = {
 
                 msgLoaded = true;
                 self._detach( msgId );
-                opts.endNonXHR.call( self, fileObj.name, fileObj.btn );
+                opts.endNonXHR.call( self, fileObj );
                 self._finish( fileObj,  '', '', event.data, sizeBox, progBox, pctBox, abortBtn, removeAbort );
             });
         }
@@ -1290,7 +1290,7 @@ ss.IframeUpload = {
                         ss.remove( iframe );
                         iframe = null;
 
-                        opts.endNonXHR.call( self, fileObj.name, fileObj.btn );
+                        opts.endNonXHR.call( self, fileObj );
 
                         // No way to get status and statusText for an iframe so return empty strings
                         self._finish( fileObj, '', '', response, sizeBox, progBox, pctBox, abortBtn, removeAbort );
@@ -1467,7 +1467,7 @@ ss.IframeUpload = {
                                 progBar.style.width = pct + '%';
                             }
 
-                            opts.onProgress.call( self, pct );
+                            opts.onProgress.call( self, fileObj, pct );
                         }
 
                         if ( size && !self._sizeFlags[key] ) {
@@ -1476,7 +1476,7 @@ ss.IframeUpload = {
                             }
 
                             self._sizeFlags[key] = 1;
-                            opts.onUpdateFileSize.call( self, size );
+                            opts.onUpdateFileSize.call( self, fileObj, size );
                         }
 
                         // Stop attempting progress checks if we keep failing
@@ -1573,7 +1573,7 @@ ss.IframeUpload = {
     },
 
     _initUpload: function( fileObj ) {
-        if ( false === this._opts.startNonXHR.call( this, fileObj.name, fileObj.btn ) ) {
+        if ( false === this._opts.startNonXHR.call( this, fileObj ) ) {
 
             if ( this._disabled ) {
                 this.enable( true );
@@ -1688,7 +1688,7 @@ ss.XhrUpload = {
                         }
 
                         if ( xhr.status >= 200 && xhr.status < 300 ) {
-                            opts.endXHR.call( self, fileObj.name, fileObj.size, fileObj.btn );
+                            opts.endXHR.call( self, fileObj );
                             self._finish( fileObj, xhr.status, statusText, xhr.responseText, sizeBox, progBox, pctBox, abortBtn, removeAbort );
 
                             // We didn't get a 2xx status so throw an error
@@ -1739,7 +1739,7 @@ ss.XhrUpload = {
             if ( event.lengthComputable ) {
                 var pct = Math.round( event.loaded / event.total * 100 );
 
-                opts.onProgress.call( self, pct );
+                opts.onProgress.call( self, fileObj, pct );
 
                 if ( pctBox ) {
                     pctBox.innerHTML = pct + '%';
@@ -1751,7 +1751,7 @@ ss.XhrUpload = {
             }
         });
 
-        opts.onProgress.call( this, 0 );
+        opts.onProgress.call( this, fileObj, 0 );
 
         if ( opts.multipart === true ) {
             var formData = new FormData();
@@ -1784,7 +1784,7 @@ ss.XhrUpload = {
 
         // Call the startXHR() callback and stop upload if it returns false
         // We call it before _uploadXhr() in case setProgressBar, setPctBox, etc., is called
-        if ( false === this._opts.startXHR.call( this, fileObj.name, fileObj.size, fileObj.btn ) ) {
+        if ( false === this._opts.startXHR.call( this, fileObj ) ) {
 
             if ( this._disabled ) {
                 this.enable( true );
@@ -2049,7 +2049,7 @@ ss.extendObj( ss.SimpleUpload.prototype, {
         "use strict";
 
         this.log( 'Upload failed: ' + status + ' ' + statusText );
-        this._opts.onError.call( this, fileObj.name, errorType, status, statusText, response, fileObj.btn, fileObj.size );
+        this._opts.onError.call( this, errorType, status, statusText, response, fileObj);
         this._last( sizeBox, progBox, pctBox, abortBtn, removeAbort );
 
         fileObj = status = statusText = response = errorType = sizeBox = progBox = pctBox = abortBtn = removeAbort = null;
@@ -2072,7 +2072,7 @@ ss.extendObj( ss.SimpleUpload.prototype, {
             }
         }
 
-        this._opts.onComplete.call( this, fileObj.name, response, fileObj.btn, fileObj.size );
+        this._opts.onComplete.call( this, response, fileObj );
         this._last( sizeBox, progBox, pctBox, abortBtn, removeAbort );
         fileObj = status = statusText = response = sizeBox = progBox = pctBox = abortBtn = removeAbort = null;
     },
@@ -2099,7 +2099,7 @@ ss.extendObj( ss.SimpleUpload.prototype, {
             if ( !extOk ) {
                 this.removeCurrent( fileObj.id );
                 this.log( 'File extension not permitted' );
-                this._opts.onExtError.call( this, fileObj.name, fileObj.ext );
+                this._opts.onExtError.call( this, fileObj );
                 return false;
             }
         }
@@ -2110,7 +2110,7 @@ ss.extendObj( ss.SimpleUpload.prototype, {
         {
             this.removeCurrent( fileObj.id );
             this.log( fileObj.name + ' exceeds ' + this._opts.maxSize + 'K limit' );
-            this._opts.onSizeError.call( this, fileObj.name, fileObj.size );
+            this._opts.onSizeError.call( this, fileObj );
             return false;
         }
 
